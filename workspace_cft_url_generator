@@ -1,0 +1,67 @@
+# Code to generate AWS CFT URL
+# Enter config params, run the code, and copy/paste
+# the URL in a browser.
+
+import hashlib
+import time
+from urllib.parse import urlencode, urlunparse
+
+
+def generate_md5_hash():
+    # random hash for bucket name and IAM role
+    md5_hash = hashlib.md5()
+    md5_hash.update(str(time.time()).encode())
+    hex_md5 = md5_hash.hexdigest()
+    return hex_md5
+
+
+# Config params
+region = 'us-west-2'
+user_name = 'EMAIL_ADDRESS'
+product_account_id = 'DATABRICKS_PRODUCT_ACCOUNT_ID'
+workspace_name = 'WORKSPACE_NAME'
+# Make sure the Service Principle has account admin privileges
+client_id = 'CLIENT_ID'
+client_secret = 'CLIENT_SECRET'
+
+
+# Don't change this
+hash_result = generate_md5_hash()
+scheme = 'https'
+path = '/cloudformation/home'
+params = ''
+netloc = region+'.console.aws.amazon.com'
+query_params = {'region': [region]}
+
+fragment_base = '/stacks/quickcreate'
+fragment_query = {
+    'templateUrl': ['https://databricks-prod-public-cfts.s3.us-west-2.amazonaws.com'
+                    '/templates/uc-by-default-via-backend-oauth/databricks-trial.template.yaml'],
+    'stackName': ['databricks-workspace-stack-'+hash_result[:4]],
+    'param_AccountId': [product_account_id],
+    'param_PricingTier': ['PREMIUM'],
+    'param_WorkspaceName': [workspace_name],
+    'param_BucketName': ['db-'+hash_result+'-s3-root-bucket'],
+    'param_IAMRole': ['db-'+hash_result+'-iam-role'],
+    'param_AWSRegion': [region],
+    'param_ClientId': [client_id],
+    'param_ClientSecret': [client_secret],
+    'param_UserName': [user_name]
+}
+
+fragment_query = urlencode(fragment_query, doseq=True)
+fragment = f'{fragment_base}?{fragment_query}'
+query = urlencode(query_params, doseq=True)
+
+# Construct the full URL for CFT
+url_cft = urlunparse((
+    scheme,
+    netloc,
+    path,
+    params,
+    query,
+    fragment
+))
+
+print('URL for CFT\n')
+print(url_cft, '\n')
